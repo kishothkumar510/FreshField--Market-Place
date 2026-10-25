@@ -429,7 +429,7 @@ function SuccessPage({ type }) {
     signup: ['Signup successful!', 'Your account has been created successfully. You can now log in to access your dashboard.', 'Go to home', 'fa-circle-check'],
     selling: ['Product listed!', 'Your product listing was submitted successfully.', 'Go to home', 'fa-circle-check'],
     contact: ['Message received!', 'Your inquiry has been sent to the FreshField team. We usually respond within 24 hours.', 'Back to home', 'fa-paper-plane'],
-    order: ['Order successful!', 'Thank you for shopping with FreshField. Your fresh produce is being prepared.', 'Back to shop', 'fa-basket-shopping'],
+    order: ['Order successful!', 'Thank you for your order. Your fresh produce is being prepared.', 'Go to home', 'fa-basket-shopping'],
   }[type];
   return (
     <main className={`success-page success-${type}`}>
