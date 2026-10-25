@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { addDoc, collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { db } from './firebase.js';
 
 const pageLinks = [
   ['Home', '/index.html#home'],
@@ -46,6 +48,13 @@ const productGroups = {
   ],
 };
 
+function getFirebaseErrorMessage(error) {
+  if (error?.code === 'permission-denied') {
+    return 'Firebase denied this request. Check your Firestore rules and ensure the required Firebase service is enabled.';
+  }
+  return error?.message || 'An unexpected Firebase error occurred.';
+}
+
 function Footer() {
   return (
     <footer className="site-footer">
@@ -73,6 +82,8 @@ function BackHome() {
 function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
+  const [contactError, setContactError] = useState('');
+  const [contactSending, setContactSending] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -91,9 +102,24 @@ function HomePage() {
     }
   }, [location.hash, location.pathname]);
 
-  const submitContact = (event) => {
+  const submitContact = async (event) => {
     event.preventDefault();
-    navigate('/contactsuccess.html');
+    setContactError('');
+    setContactSending(true);
+    const data = new FormData(event.currentTarget);
+    try {
+      await addDoc(collection(db, 'contactMessages'), {
+        fullName: data.get('name'),
+        email: data.get('email'),
+        feedback: data.get('feedback'),
+        createdAt: serverTimestamp(),
+      });
+      navigate('/contactsuccess.html');
+    } catch (error) {
+      setContactError(`Could not send your message: ${getFirebaseErrorMessage(error)}`);
+    } finally {
+      setContactSending(false);
+    }
   };
 
   return (
@@ -163,7 +189,8 @@ function HomePage() {
             <input id="contact-email" name="email" type="email" placeholder="you@example.com" required />
             <label htmlFor="contact-feedback">Your feedback</label>
             <textarea id="contact-feedback" name="feedback" rows="4" placeholder="How can we help?" required />
-            <button className="button button-green" type="submit">Send message <i className="fa-solid fa-paper-plane" /></button>
+            {contactError && <p className="form-error" role="alert">{contactError}</p>}
+            <button className="button button-green" type="submit" disabled={contactSending}>{contactSending ? 'Sending…' : 'Send message'} <i className="fa-solid fa-paper-plane" /></button>
           </form>
         </section>
       </main>
@@ -202,6 +229,8 @@ function ProductLandingPage() {
 function CartPage() {
   const [category, setCategory] = useState('Fruits');
   const [cart, setCart] = useState([]);
+  const [checkoutError, setCheckoutError] = useState('');
+  const [checkingOut, setCheckingOut] = useState(false);
   const navigate = useNavigate();
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -218,6 +247,25 @@ function CartPage() {
     setCart((items) => items
       .map((item) => item.name === name ? { ...item, quantity: item.quantity + amount } : item)
       .filter((item) => item.quantity > 0));
+  };
+
+  const checkout = async () => {
+    setCheckoutError('');
+    setCheckingOut(true);
+    try {
+      await addDoc(collection(db, 'orders'), {
+        items: cart.map(({ name, price, quantity }) => ({ name, price, quantity })),
+        total,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      });
+      setCart([]);
+      navigate('/thankyou.html');
+    } catch (error) {
+      setCheckoutError(`Could not place your order: ${getFirebaseErrorMessage(error)}`);
+    } finally {
+      setCheckingOut(false);
+    }
   };
 
   return (
@@ -262,7 +310,8 @@ function CartPage() {
               </table>
             </div>
           )}
-          <div className="cart-total"><p>Grand total <strong>₹{total.toFixed(2)}</strong></p><button className="button button-green" type="button" disabled={!cart.length} onClick={() => navigate('/thankyou.html')}>Proceed to checkout <i className="fa-solid fa-arrow-right" /></button></div>
+          {checkoutError && <p className="form-error" role="alert">{checkoutError}</p>}
+          <div className="cart-total"><p>Grand total <strong>₹{total.toFixed(2)}</strong></p><button className="button button-green" type="button" disabled={!cart.length || checkingOut} onClick={checkout}>{checkingOut ? 'Placing order…' : 'Proceed to checkout'} <i className="fa-solid fa-arrow-right" /></button></div>
         </section>
       </main>
       <Footer />
@@ -349,10 +398,12 @@ function AuthPage({ signup = false }) {
 
 function SellingPage() {
   const navigate = useNavigate();
+
   const submit = (event) => {
     event.preventDefault();
     navigate('/sellingupdate.html');
   };
+
   return (
     <div className="seller-page">
       <BackHome />
@@ -376,7 +427,7 @@ function SuccessPage({ type }) {
   const details = {
     login: ['Login successful!', 'Welcome back to FreshField Agriculture Market.', 'Go to dashboard', 'fa-circle-check'],
     signup: ['Signup successful!', 'Your account has been created successfully. You can now log in to access your dashboard.', 'Go to home', 'fa-circle-check'],
-    selling: ['Product listed!', 'Your product has been updated and listed successfully on FreshField.', 'Return to home', 'fa-circle-check'],
+    selling: ['Product listed!', 'Your product listing was submitted successfully.', 'Go to home', 'fa-circle-check'],
     contact: ['Message received!', 'Your inquiry has been sent to the FreshField team. We usually respond within 24 hours.', 'Back to home', 'fa-paper-plane'],
     order: ['Order successful!', 'Thank you for shopping with FreshField. Your fresh produce is being prepared.', 'Back to shop', 'fa-basket-shopping'],
   }[type];

@@ -63,6 +63,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .button-green { background: var(--green); color: white; }
 .button-green:hover { background: #1b5d39; }
 .button-green:disabled { opacity: .48; cursor: not-allowed; transform: none; }
+.form-error { margin: 14px 0 0; color: #a33128; font-size: 13px; line-height: 1.5; }
 .button-outline { min-height: 40px; border: 1px solid #c4d6c7; color: var(--green-dark); background: transparent; }
 
 .about-section { display: flex; flex-direction: column; justify-content: center; background: linear-gradient(rgba(12, 43, 27, .88), rgba(12, 43, 27, .88)), url("/images/field3.jpg") center / cover; color: white; }
