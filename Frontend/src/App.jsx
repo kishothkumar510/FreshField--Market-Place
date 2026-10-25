@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { addDoc, collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from './firebase.js';
@@ -51,6 +51,12 @@ const productGroups = {
 function getFirebaseErrorMessage(error) {
   if (error?.code === 'permission-denied') {
     return 'Firebase denied this request. Check your Firestore rules and ensure the required Firebase service is enabled.';
+  }
+  if (error?.code === 'unavailable') {
+    return 'Firebase is unavailable. Check your internet connection and try again.';
+  }
+  if (error?.code === 'checkout/timeout') {
+    return 'Firebase is taking too long to confirm this order. It may still be syncing; retry safely or check Firestore before submitting again.';
   }
   return error?.message || 'An unexpected Firebase error occurred.';
 }
@@ -231,6 +237,7 @@ function CartPage() {
   const [cart, setCart] = useState([]);
   const [checkoutError, setCheckoutError] = useState('');
   const [checkingOut, setCheckingOut] = useState(false);
+  const orderDocument = useRef(null);
   const navigate = useNavigate();
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -250,20 +257,35 @@ function CartPage() {
   };
 
   const checkout = async () => {
+    if (!cart.length || checkingOut) return;
     setCheckoutError('');
     setCheckingOut(true);
+    let timeoutId;
     try {
-      await addDoc(collection(db, 'orders'), {
+      orderDocument.current ??= doc(collection(db, 'orders'));
+      const saveOrder = setDoc(orderDocument.current, {
         items: cart.map(({ name, price, quantity }) => ({ name, price, quantity })),
         total,
         status: 'pending',
         createdAt: serverTimestamp(),
       });
+      await Promise.race([
+        saveOrder,
+        new Promise((_, reject) => {
+          timeoutId = window.setTimeout(() => {
+            const error = new Error('Order confirmation timed out.');
+            error.code = 'checkout/timeout';
+            reject(error);
+          }, 20000);
+        }),
+      ]);
+      orderDocument.current = null;
       setCart([]);
       navigate('/thankyou.html');
     } catch (error) {
       setCheckoutError(`Could not place your order: ${getFirebaseErrorMessage(error)}`);
     } finally {
+      window.clearTimeout(timeoutId);
       setCheckingOut(false);
     }
   };
