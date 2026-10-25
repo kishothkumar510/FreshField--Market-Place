@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { addDoc, collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { db, missingFirebaseConfig } from './firebase.js';
+import { db } from './firebase.js';
 
 const pageLinks = [
   ['Home', '/index.html#home'],
@@ -49,9 +49,6 @@ const productGroups = {
 };
 
 function getFirebaseErrorMessage(error) {
-  if (error?.code === 'firebase/configuration-missing') {
-    return `Firebase configuration is missing: ${missingFirebaseConfig.join(', ')}. Add these variables in Vercel Project Settings > Environment Variables, then redeploy. For local development, set them in Frontend/.env.local and restart Vite.`;
-  }
   if (error?.code === 'permission-denied') {
     return 'Firebase denied this request. Check your Firestore rules and ensure the required Firebase service is enabled.';
   }
@@ -265,11 +262,6 @@ function CartPage() {
     setCheckingOut(true);
     let timeoutId;
     try {
-      if (missingFirebaseConfig.length) {
-        const error = new Error('Firebase configuration is missing.');
-        error.code = 'firebase/configuration-missing';
-        throw error;
-      }
       orderDocument.current ??= doc(collection(db, 'orders'));
       const saveOrder = setDoc(orderDocument.current, {
         items: cart.map(({ name, price, quantity }) => ({ name, price, quantity })),

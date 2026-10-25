@@ -2,17 +2,13 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: 'AIzaSyC0SNSJ85nHh3mbBabAb9DHJPhc8FHavQA',
+  authDomain: 'freshfield-app-a91b3.firebaseapp.com',
+  projectId: 'freshfield-app-a91b3',
+  storageBucket: 'freshfield-app-a91b3.firebasestorage.app',
+  messagingSenderId: '615588826946',
+  appId: '1:615588826946:web:9ded09303cdfe6f08d02db',
 };
-
-export const missingFirebaseConfig = Object.entries(firebaseConfig)
-  .filter(([, value]) => !value)
-  .map(([key]) => `VITE_FIREBASE_${key.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase()}`);
 
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
